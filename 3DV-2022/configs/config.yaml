@@ -1,19 +1,50 @@
 # input data
 # base_dir: /home/chialiang86/Desktop/3DCV/hw/3DV-2022
-data_dir: /home/chialiang86/Desktop/3DCV/hw/3DV-2022/data/chair_img_pc_voxel_mesh
-dtype: "point" # "point" "voxel"
+
+######### dataset #########
+data_dir: data/chair_img_pc_voxel_mesh
+train_data: train_data.txt
+val_data: val_data.txt
+dtype: "point" 
+# dtype: "voxel" 
+# dtype: "mesh" 
+
+######### data loader #########
+batch_size: 10
+num_workers: 2
+
+######### data #########
+
+# point cloud points
 n_points: 2048
+
+# voxel grids 33x33x33 = 35937
+voxel_length: 33 
+voxel_width: 33 
+voxel_height: 33 
+
+# mesh verts
+n_verts: 2562
+n_faces: 5120
+
+######### network #########
 
 # vision model
 arch: resnet18
 
+######### loss #########
+w_chamfer: 1.0
+w_edge: 1.0
+w_smooth: 0.1
+w_normal: 0.05
+
+######### hyper parameters #########
+
 # training
 lr: 0.0004
-max_iter: 50
+max_iter: 2
 
-# dataloader
-batch_size: 10
-num_workers: 2
+######### training config #########
 
 # logger
 log_freq: 1000
