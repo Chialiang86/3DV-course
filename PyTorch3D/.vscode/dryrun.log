@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/chialiang86/Desktop/3DCV/hw/PyTorch3D'
+make: Leaving directory '/home/chialiang86/Desktop/3DCV/hw/PyTorch3D'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+

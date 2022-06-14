@@ -1,0 +1,6 @@
+# Render a colored point cloud
+
+This tutorial shows how to:
+- set up a renderer 
+- render the point cloud 
+- vary the rendering settings such as compositing and camera position

@@ -1,0 +1,20 @@
+- obj structure
+- self-defined chamfer distance
+
+first, we should install the pytorch3d
+In this part, we will try to deform a sphere mesh with radious = 1 to target mesh
+before deform the mesh, we should normalizing the target mesh
+In the optimization step, we will iteratively deform the mesh until the number of iteration to max iteration number
+the loss function is defined by the weighted sum of the four losses
+- chamfer distance loss
+- mesh_edge_loss
+- mesh_normal_consistency
+- mesh_laplacian_smoothing
+here we set the weight as
+w_chamfer = 1.0 
+# Weight for mesh edge loss
+w_edge = 1.0 
+# Weight for mesh normal consistency
+w_normal = 0.01 
+# Weight for mesh laplacian smoothing
+w_laplacian = 0.1 

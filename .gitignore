@@ -1,0 +1,7 @@
+*/.ipynb_checkpoints
+*/__pycache__
+3DV-2022/data/
+3DV-2022/outputs/
+*.pth
+PyTorch3D/deform_source_mesh_to_target_mesh/cub-1.10.0/
+PyTorch3D/fit_textured_volume/cub-1.10.0/
