@@ -128,49 +128,42 @@ def val_point_or_voxel(loader_val : torch.utils.data.DataLoader,
                         cfg, out_dir):
     dtype = cfg['dtype']
 
-    print(type(loader_val))
     loss_list = []
     cnt = 0
     val_loader = iter(loader_val)
     for images_gt, ground_truth_3d, object_id in tqdm(val_loader):
-
-        cnt += 1
-        if cnt == 10:
-            break
 
         # prediction
         images_gt, ground_truth_3d = images_gt.cuda(), ground_truth_3d.cuda()
         prediction_3d = model(images_gt, cfg)
         loss = calculate_loss(ground_truth_3d, prediction_3d, cfg).cpu().item()
         
-        loss_vis = loss.cpu().item()
+        loss_vis = loss
         loss_list.append(loss_vis)
 
-        # torch.save(prediction_3d.detach().cpu(), f'{out_dir}/pre_point_cloud_{cnt}.pt')
-
-        if cfg['dtype'] == "voxel":
-            print('rendering voxels ...')
-            plot_voxel(ground_truth_3d[0], 
-                        prediction_3d[0], 
-                        fname=f'{out_dir}/{dtype}_{cnt}.png')
-        
-        # render points and meshes
-        if cfg['dtype'] != "voxel":
-            print(f'rendering {dtype} ...')
-            plot_pointcloud(ground_truth_3d[0], 
+        if cnt < 10:
+            cnt += 1
+            
+            if cfg['dtype'] == "voxel":
+                print('rendering voxels ...')
+                plot_voxel(ground_truth_3d[0], 
                             prediction_3d[0], 
                             fname=f'{out_dir}/{dtype}_{cnt}.png')
-            plot_render(scene,
-                        ground_truth_3d[0], 
-                        prediction_3d[0],
-                        fname=f'{out_dir}/render_{cnt}.png',
-                        cfg=cfg)
+            
+            # render points and meshes
+            if cfg['dtype'] != "voxel":
+                print(f'rendering {dtype} ...')
+                plot_pointcloud(ground_truth_3d[0], 
+                                prediction_3d[0], 
+                                fname=f'{out_dir}/{dtype}_{cnt}.png')
+                plot_render(scene,
+                            ground_truth_3d[0], 
+                            prediction_3d[0],
+                            fname=f'{out_dir}/render_{cnt}.png',
+                            cfg=cfg)
 
-    plt.clf()
-    plt.title(f'Loss Curve (type = {dtype})')
-    plt.plot(loss_list)
-    plt.savefig(f'{out_dir}/loss_curve.png')
-
+    avg_loss = float(torch.FloatTensor(loss_list).mean())
+    print(f'[avg_loss = {avg_loss}]')
     print('Done!')
 
 def val_mesh(loader_val : torch.utils.data.DataLoader,
@@ -183,11 +176,7 @@ def val_mesh(loader_val : torch.utils.data.DataLoader,
     cnt = 0
 
     val_loader = iter(loader_val)
-    for data in val_loader:
-
-        cnt += 1
-        if cnt == 10:
-            break
+    for data in tqdm(val_loader):
 
         images_gt = data['img']
         mesh_verts_gt = data['verts']
@@ -223,19 +212,22 @@ def val_mesh(loader_val : torch.utils.data.DataLoader,
         
         loss_vis = loss.cpu().item()
         loss_list.append(loss_vis)
-        print(f'cnt  : {cnt}, loss = {float(loss)}')
 
-        plot_render(scene,
-                    meshes_gt[0], 
-                    meshes_pred[0],
-                    fname=f'{out_dir}/render_{cnt}.png',
-                    cfg=cfg)
+        if cnt < 10:
+            cnt += 1
+            plot_render(scene,
+                        meshes_gt[0], 
+                        meshes_pred[0],
+                        fname=f'{out_dir}/render_{cnt}.png',
+                        cfg=cfg)
+            
+            print(f'rendering {dtype} ...')
+            plot_pointcloud(mesh_verts_gt[0], 
+                            verts_pred[0], 
+                            fname=f'{out_dir}/{dtype}_{cnt}.png')
 
-    plt.clf()
-    plt.title(f'Loss Curve (type = {dtype})')
-    plt.plot(loss_list)
-    plt.savefig(f'{out_dir}/loss_curve.png')
-
+    avg_loss = float(torch.FloatTensor(loss_list).mean())
+    print(f'[avg_loss = {avg_loss}]')
     print('Done!')
 
 # @hydra.main(config_path="configs/", config_name="config.yaml")

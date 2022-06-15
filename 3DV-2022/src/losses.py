@@ -16,9 +16,14 @@ def voxel_loss(voxel_src,voxel_tgt):
     return loss_voxel
 
 def chamfer_loss(point_cloud_src, point_cloud_tgt):
+    cdist = torch.cdist(point_cloud_src, point_cloud_tgt) # B x M x N
+    first_term = cdist.min(dim=2)[0].mean() # B x M
+    second_term = cdist.min(dim=1)[0].mean() # B x N
+    loss_chamfer = (0.3 * first_term + 0.7 * second_term) / 4
+    return loss_chamfer
+
+def chamfer_loss_torch(point_cloud_src, point_cloud_tgt):
     loss_chamfer, _ = chamfer_distance(point_cloud_src, point_cloud_tgt)
-    # # Weighted sum of the losses
-    # loss = loss_chamfer * w_chamfer + loss_edge * w_edge + loss_normal * w_normal + loss_laplacian * w_laplacian
     return loss_chamfer
 
 def edge_loss(new_src_mesh):
@@ -29,10 +34,25 @@ def normal_loss(new_src_mesh):
     loss_normal = mesh_normal_consistency(new_src_mesh)
     return loss_normal
 
-def smoothness_loss(mesh_src):
-	loss_laplacian = mesh_laplacian_smoothing(mesh_src, method="uniform")
-	# implement laplacian smoothening loss
-	return loss_laplacian
+def smoothness_loss(mesh_src, type='L1'):
+    verts = mesh_src.verts_list()[0].cuda()
+    faces = mesh_src.faces_list()[0].cuda()
+    L = torch.zeros(verts.shape[0], verts.shape[0]).cuda() # N x N
+    val = -1/3
+    for face in faces:
+        L[face[0], face[1]] = val # build laplacian matrix
+        L[face[1], face[2]] = val # build laplacian matrix
+        L[face[2], face[0]] = val # build laplacian matrix
+    # for the diagonal term D be the sum of each row (column)
+    L[range(verts.shape[0]), range(verts.shape[0])] = -L.sum(dim = 1) 
+
+    N = verts.shape[0] * verts.shape[1]
+    if type == 'L1':
+        loss_smooth = ((L @ verts).abs()).sum() / N
+    if type == 'L2':
+        loss_smooth = ((L @ verts)**2).sum() / N
+    return loss_smooth
+    # return mesh_laplacian_smoothing(mesh_src)
 
 def calculate_loss(ground_truth, predictions, cfg):
     if cfg['dtype'] == 'voxel':
@@ -44,7 +64,6 @@ def calculate_loss(ground_truth, predictions, cfg):
     elif cfg['dtype'] == 'mesh':
         assert isinstance(ground_truth, list) and \
             isinstance(predictions, list) and \
-            len(ground_truth) == len(predictions) and\
             isinstance(ground_truth[0], Meshes) and isinstance(predictions[0], Meshes)
 
         loss = 0.0

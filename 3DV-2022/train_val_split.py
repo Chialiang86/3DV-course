@@ -8,10 +8,14 @@ def main():
 
     n = len(data_dirs)
     ratio = 0.9
+    # randomly select the index with out repeating
     all_inds = np.random.randint(n, size=n)
+
+    # assign first 90% to training set and the remaining 10% for validation set.
     train_inds = all_inds[:int(ratio * n)]
     val_inds = all_inds[int(ratio * n):]
 
+    # write the data id ( directory name ) into files
     train_path = 'data/chair_img_pc_voxel_mesh/train_data.txt'
     with open(train_path, 'w') as f:
         for ind in train_inds:

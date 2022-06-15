@@ -34,15 +34,15 @@ arch: resnet18
 
 ######### loss #########
 w_chamfer: 1.0
-w_edge: 1.0
-w_smooth: 0.1
-w_normal: 0.05
+w_smooth: 1.0
+w_edge: 0.1
+w_normal: 0.1
 
 ######### hyper parameters #########
 
 # training
 lr: 0.0004
-max_iter: 2
+max_iter: 50
 
 ######### training config #########
 
@@ -51,7 +51,7 @@ log_freq: 1000
 
 # checkpoint
 save_freq: 1
-load_checkpoint: False
+load_checkpoint: True
 
 # eval
 vis_freq: 1

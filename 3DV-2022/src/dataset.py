@@ -73,8 +73,7 @@ class ShapeNetDB(Dataset):
             return model
 
     def __load_db(self):
-        # print(os.path.join(self.data_dir, '*'))
-
+        # ex : data/chair_img_pc_voxel_mesh/train_data.txt
         f = open(os.path.join(self.data_dir, self.data_txt), 'r')
         f_dirs = f.readlines()
         db_list = []
@@ -107,15 +106,6 @@ class ShapeNetDB(Dataset):
         scale = max(verts.abs().max(0)[0])
         verts = verts / scale
 
-        # make white texturre
-        verts_rgb = torch.ones_like(verts)[None]  # (1, V, 3)
-        # textures = TexturesVertex(verts_features=verts_rgb)
-
-        # mesh = Meshes(
-        #     verts=[verts],
-        #     faces=[faces_idx],
-        #     textures=textures
-        # )
         object_id = self.db[idx].split('/')[self.id_index]
 
         return verts, faces_idx, object_id

@@ -67,9 +67,12 @@ def train_point_or_voxel(loader_train : torch.utils.data.DataLoader,
 
         iter_start_time = time.time()
 
+        # training
         model.train()
         train_loader = iter(loader_train)
-        for images_gt, ground_truth_3d, object_id in tqdm(train_loader):
+        loss_iter_train = []
+        for images_gt, ground_truth_3d, object_id in (pgbar := tqdm(train_loader)):
+            pgbar.set_description("[%4d/%4d]" % (step, cfg['max_iter']))
 
             images_gt, ground_truth_3d = images_gt.cuda(), ground_truth_3d.cuda()
 
@@ -81,14 +84,18 @@ def train_point_or_voxel(loader_train : torch.utils.data.DataLoader,
             optimizer.step()        
 
             loss_vis = loss.cpu().item()
-            loss_list_train.append(loss_vis)
+            loss_iter_train.append(loss_vis)
 
             iter_time = time.time() - iter_start_time
-            print("[%4d/%4d]; ttime: %.0f ; loss: %.5f" % (step, cfg['max_iter'], iter_time, loss_vis))
 
+        loss_list_train.append( float(torch.FloatTensor(loss_iter_train).mean()) )
+
+        # validation
         model.eval()
         val_loader = iter(loader_val)
-        for images_gt, ground_truth_3d, object_id in tqdm(val_loader):
+        loss_iter_val = []
+        for images_gt, ground_truth_3d, object_id in (pgbar := tqdm(val_loader)):
+            pgbar.set_description("[%4d/%4d]" % (step, cfg['max_iter']))
 
             # prediction
             images_gt, ground_truth_3d = images_gt.cuda(), ground_truth_3d.cuda()
@@ -96,8 +103,12 @@ def train_point_or_voxel(loader_train : torch.utils.data.DataLoader,
             loss = calculate_loss(ground_truth_3d, prediction_3d, cfg)
             
             loss_vis = loss.cpu().item()
-            loss_list_val.append(loss_vis)
+            loss_iter_val.append(loss_vis)
 
+        loss_list_val.append( float(torch.FloatTensor(loss_iter_val).mean()) )
+        iter_time = time.time() - iter_start_time
+        print("[%4d/%4d]: ttime: %.0f ; training loss: %.5f, validation loss: %.5f" % 
+            (step, cfg['max_iter'], iter_time, loss_list_train[-1], loss_list_val[-1]))
         
         if (step % cfg['save_freq']) == 0:
             torch.save({
@@ -127,9 +138,12 @@ def train_mesh(loader_train : torch.utils.data.DataLoader,
 
         iter_start_time = time.time()
 
+        # training
         model.train()
         train_loader = iter(loader_train)
-        for data in tqdm(train_loader):
+        loss_iter_train = []
+        for data in (pgbar := tqdm(train_loader)):
+            pgbar.set_description("[%4d/%4d]" % (step, cfg['max_iter']))
 
             images_gt = data['img']
             mesh_verts_gt = data['verts']
@@ -152,7 +166,7 @@ def train_mesh(loader_train : torch.utils.data.DataLoader,
 
                 mesh_pred = Meshes(
                     verts=[verts_pred[i]],
-                    faces=[model.faces],
+                    faces=[model.faces.cuda()],
                     textures=None
                 )
                 meshes_pred.append(mesh_pred)
@@ -164,14 +178,17 @@ def train_mesh(loader_train : torch.utils.data.DataLoader,
             optimizer.step()        
 
             loss_vis = loss.cpu().item()
-            loss_list_train.append(loss_vis)
+            loss_iter_train.append(loss_vis)
 
-            iter_time = time.time() - iter_start_time
-            print("[%4d/%4d]; ttime: %.0f ; loss: %.5f" % (step, cfg['max_iter'], iter_time, loss_vis))
+        
+        loss_list_train.append( float(torch.Tensor(loss_iter_train).mean()) )
 
+        # validation
         model.eval()
         val_loader = iter(loader_val)
-        for data in tqdm(val_loader):
+        loss_iter_val = []
+        for data in (pgbar := tqdm(val_loader)):
+            pgbar.set_description("[%4d/%4d]" % (step, cfg['max_iter']))
 
             images_gt = data['img']
             mesh_verts_gt = data['verts']
@@ -202,7 +219,12 @@ def train_mesh(loader_train : torch.utils.data.DataLoader,
             loss = calculate_loss(meshes_gt, meshes_pred, cfg)
             
             loss_vis = loss.cpu().item()
-            loss_list_train.append(loss_vis)
+            loss_iter_val.append(loss_vis)
+
+        loss_list_val.append( float(torch.Tensor(loss_iter_val).mean()) )
+        iter_time = time.time() - iter_start_time
+        print("[%4d/%4d]; ttime: %.0f ; training loss: %.5f, validation loss: %.5f" % 
+            (step, cfg['max_iter'], iter_time, loss_list_train[-1], loss_list_val[-1]))
 
         if (step % cfg['save_freq']) == 0:
             torch.save({
@@ -273,7 +295,7 @@ def train_model(args, cfg):
     # ============ preparing optimizer ... ============
     optimizer = torch.optim.Adam(model.parameters(), lr = cfg['lr'])  # to use with ViTs
 
-    start_iter = 0
+    start_iter = 20
 
     if cfg['load_checkpoint']:
         checkpoint = torch.load(f'{out_dir}/checkpoint_{dtype}.pth')

@@ -17,22 +17,20 @@ class SingleViewto3D(nn.Module):
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
 
         # define decoder
-        if cfg['dtype'] == "voxel":
+        if cfg['dtype'] == "voxel": # ResNet18
             self.decoder =  VolumeDecoder(cfg['voxel_length'], cfg['voxel_width'], cfg['voxel_height'], 512)           
-        elif cfg['dtype'] == "point":
+        elif cfg['dtype'] == "point": # ResNet50
             self.n_point = cfg['n_points']
             self.decoder = PointDecoder(cfg['n_points'], 512)
-        elif cfg['dtype'] == "mesh":
+        elif cfg['dtype'] == "mesh": # ResNet18
             self.decoder = MeshVertsDecoder(cfg['n_verts'], 512)
             
             # make white texturre
             mesh_pred = ico_sphere(4,'cuda')
-            
-            self.verts = mesh_pred.verts_list()[0].cuda()
             self.faces = mesh_pred.faces_list()[0].cuda()
             
-            verts_rgb = torch.ones_like(self.verts)[None]  # (1, V, 3)
-            self.textures = TexturesVertex(verts_features=verts_rgb)
+            # verts_rgb = torch.ones_like(self.verts)[None]  # (1, V, 3)
+            # self.textures = TexturesVertex(verts_features=verts_rgb)
 
             # self.mesh_pred = Meshes(
             #     mesh_pred.verts_list()*cfg['batch_size'], 
@@ -44,9 +42,6 @@ class SingleViewto3D(nn.Module):
     def forward(self, images, cfg):
         # results = dict()
 
-        # total_loss = 0.0
-        # start_time = time.time()
-        # B = images.shape[0]
 
         images_normalize = self.normalize(images.permute(0,3,1,2))
         encoded_feat = self.encoder(images_normalize).squeeze(-1).squeeze(-1)
@@ -57,7 +52,6 @@ class SingleViewto3D(nn.Module):
             return voxels_pred
 
         elif cfg['dtype'] == "point":
-            # TODO:
             pointclouds_pred = self.decoder(encoded_feat)
             return pointclouds_pred
 
@@ -93,12 +87,11 @@ class PointDecoder(nn.Module):
     def __init__(self, num_points, latent_size):
         super(PointDecoder, self).__init__()
         self.num_points = num_points
-        self.fc0 = nn.Linear(latent_size, 100)
-        self.fc1 = nn.Linear(100, 128)
-        self.fc2 = nn.Linear(128, 256)
-        self.fc3 = nn.Linear(256, 512)
-        self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, self.num_points * 3)
+        self.fc0 = nn.Linear(latent_size, 512)
+        self.fc1 = nn.Linear(512, 1024)
+        self.fc2 = nn.Linear(1024, 1024)
+        self.fc3 = nn.Linear(1024, 1024)
+        self.fc4 = nn.Linear(1024, self.num_points * 3)
         self.th = nn.Tanh()
 
     def forward(self, x):
@@ -107,8 +100,7 @@ class PointDecoder(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-        x = self.th(self.fc5(x))
+        x = self.th(self.fc4(x))
         x = x.view(batchsize, self.num_points, 3)
         return x
 
@@ -142,7 +134,8 @@ class MeshVertsDecoder(nn.Module):
         self.fc0 = nn.Linear(latent_size, 1024)
         self.fc1 = nn.Linear(1024, 1024)
         self.fc2 = nn.Linear(1024, 1024)
-        self.fc3 = nn.Linear(1024, self.num_verts * 3)
+        self.fc3 = nn.Linear(1024, 1024)
+        self.fc4 = nn.Linear(1024, self.num_verts * 3)
         self.th = nn.Tanh()
 
     def forward(self, x):
@@ -150,6 +143,7 @@ class MeshVertsDecoder(nn.Module):
         x = F.relu(self.fc0(x))
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.th(self.fc3(x))
+        x = F.relu(self.fc3(x))
+        x = self.th(self.fc4(x))
         x = x.view(batchsize, self.num_verts, 3)
         return x
